@@ -1,0 +1,113 @@
+version: '3.8'
+
+services:
+  pfsense-controller:
+    # Build from source or use pre-built image
+    # image: ghcr.io/kristijanl/pfsense-container-controller:latest
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    container_name: pfsense-controller
+    
+    # Mount Docker socket for container monitoring
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./config.toml:/etc/pfsense-controller/config.toml:ro
+    
+    # Environment variable configuration (alternative to config file)
+    environment:
+      # Uncomment and configure these if not using config.toml
+      # PFSENSE_URL: "https://your-pfsense.example.com:8443/api/v2"
+      # PFSENSE_API_KEY: "your-api-key-here"
+      # PFSENSE_INSECURE_TLS: "true"
+      PFSENSE_LOG_LEVEL: "info"
+      PFSENSE_POLL_INTERVAL: "30s"
+      # PFSENSE_TRAEFIK_COMPAT_MODE: "true"  # Uncomment to enable Traefik compatibility
+      
+    # Expose health/metrics port
+    ports:
+      - "8080:8080"
+    
+    # Health check
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    
+    # Labels for documentation
+    labels:
+      - "traefik.enable=false"  # Disable if using Traefik
+      - "com.centurylinklabs.watchtower.enable=true"  # Enable Watchtower updates
+
+  # Example service that will be managed by the controller
+  example-web:
+    image: nginx:alpine
+    restart: unless-stopped
+    
+    # pfSense controller labels
+    labels:
+      # Enable the controller for this container
+      pfsense-controller.enable: "true"
+      
+      # Specify which pfSense endpoint to use (optional)
+      pfsense-controller.endpoint: "production"
+      
+      # Backend configuration
+      pfsense-controller.backend.name: "example-web-backend"
+      pfsense-controller.backend.port: "80"
+      pfsense-controller.backend.health_check_path: "/"
+      pfsense-controller.backend.server_name: "example-web"
+      
+      # Frontend configuration
+      pfsense-controller.frontend.name: "example-web-frontend"  
+      pfsense-controller.frontend.rule: "Host(`example.localhost`)"
+      pfsense-controller.frontend.acl_name: "example-web-acl"
+    
+    # Custom nginx configuration (optional)
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    
+    # Internal port only - external access via pfSense HAProxy
+    expose:
+      - "80"
+
+  # Another example service with different configuration
+  api-service:
+    image: httpd:alpine
+    restart: unless-stopped
+    
+    labels:
+      pfsense-controller.enable: "true"
+      pfsense-controller.backend.port: "80"
+      pfsense-controller.backend.health_check_path: "/health"
+      pfsense-controller.frontend.rule: "Host(`api.localhost`) && PathPrefix(`/api`)"
+    
+    expose:
+      - "80"
+
+  # Example service using Traefik labels (requires traefik_compat_mode = true)
+  traefik-service:
+    image: nginx:alpine
+    restart: unless-stopped
+    
+    labels:
+      # Original Traefik labels (for backend configuration)
+      traefik.enable: "true"
+      traefik.http.services.traefik-service.loadbalancer.server.port: "80"
+      traefik.http.routers.traefik-service.rule: "Host(`traefik.localhost`)"
+      traefik.http.routers.traefik-service.service: "traefik-service"
+      
+      # pfSense controller frontend labels (still required in Traefik mode)
+      pfsense-controller.frontend.name: "traefik-service-frontend"
+      pfsense-controller.frontend.rule: "Host(`traefik.localhost`)"
+      pfsense-controller.frontend.acl_name: "traefik-service-acl"
+    
+    expose:
+      - "80"
+
+networks:
+  default:
+    name: pfsense-controller

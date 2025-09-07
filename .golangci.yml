@@ -1,0 +1,59 @@
+linters-settings:
+  gocyclo:
+    min-complexity: 15
+  goconst:
+    min-len: 2
+    min-occurrences: 2
+  gocritic:
+    enabled-tags:
+      - diagnostic
+      - experimental
+      - opinionated
+      - performance
+      - style
+  govet:
+    enable-all: true
+    disable:
+      - shadow
+  lll:
+    line-length: 140
+  maligned:
+    suggest-new: true
+  misspell:
+    locale: US
+
+linters:
+  disable-all: true
+  enable:
+    - bodyclose
+    - errcheck
+    - gochecknoinits
+    - goconst
+    - gocritic
+    - gofmt
+    - goimports
+    - gosec
+    - gosimple
+    - govet
+    - ineffassign
+    - lll
+    - misspell
+    - rowserrcheck
+    - staticcheck
+    - typecheck
+    - unconvert
+    - unparam
+    - unused
+    - revive
+
+run:
+  timeout: 5m
+  modules-download-mode: readonly
+
+issues:
+  exclude-rules:
+    - path: _test\.go
+      linters:
+        - gosec
+        - lll
+  exclude-use-default: false

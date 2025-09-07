@@ -1,0 +1,47 @@
+# pfSense Container Controller Configuration Example
+
+[global]
+# How often to scan for container changes
+poll_interval = "30s"
+
+# Number of retry attempts for failed API calls
+retry_attempts = 3
+
+# Delay between retries
+retry_delay = "5s"
+
+# Log level: debug, info, warn, error
+log_level = "info"
+
+# Port for health check and metrics HTTP server
+health_port = 8080
+
+# Enable Traefik compatibility mode - allows reusing existing Traefik labels for backend configuration
+# Frontend configuration still requires pfsense-controller labels
+traefik_compat_mode = false
+
+# Multiple pfSense endpoints can be configured
+# This allows you to manage multiple pfSense instances
+
+[[endpoints]]
+name = "production"
+url = "https://gateway.llso.work:8081/api/v2"
+api_key = "your-production-api-key-here"
+insecure_tls = false
+request_timeout = "30s"
+
+[[endpoints]]
+name = "testing"
+url = "https://gateway.hc.hoowlr.com:8443/api/v2"
+api_key = "your-testing-api-key-here"
+insecure_tls = true  # Only use in testing environments
+request_timeout = "30s"
+
+# Environment variable overrides:
+# PFSENSE_URL - Single endpoint URL (creates default endpoint)
+# PFSENSE_API_KEY - API key for default endpoint
+# PFSENSE_INSECURE_TLS - Skip TLS verification (true/false)
+# PFSENSE_POLL_INTERVAL - Override poll interval
+# PFSENSE_LOG_LEVEL - Override log level
+# PFSENSE_HEALTH_PORT - Override health server port
+# PFSENSE_TRAEFIK_COMPAT_MODE - Enable Traefik compatibility mode (true/false)
